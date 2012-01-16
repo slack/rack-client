@@ -7,9 +7,17 @@ module Rack
       class NetHTTP
         include Rack::Client::DualBand
 
+        NET_HTTP_OPTS = [:open_timeout, :read_timeout, :continue_timeout, :ssl_timeout]
+
+        attr_reader :opts
+
         class << self
           extend Forwardable
           def_delegator :new, :call
+        end
+
+        def initialize(opts ={})
+          @opts = opts
         end
 
         def sync_call(env)
@@ -36,6 +44,12 @@ module Rack
 
         def net_connection_for(request)
           connection = Net::HTTP.new(request.host, request.port)
+
+          opts.keys.each do |key|
+            if NET_HTTP_OPTS.include? key
+              connection.send("#{key}=".to_sym, opts[key])
+            end
+          end
 
           if request.scheme == 'https'
             connection.use_ssl = true
